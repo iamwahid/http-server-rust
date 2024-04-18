@@ -4,10 +4,10 @@ use std::thread;
 
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:4221").unwrap();
-    
-    let worker = thread::spawn(
-        move || {
-            for stream in listener.incoming() {
+
+    for stream in listener.incoming() {
+        let _worker = thread::spawn(
+            move || {
                 match stream {
                     Ok(mut stream) => {
                         let mut buffer = [0; 1024];
@@ -62,7 +62,6 @@ fn main() {
                     }
                 }
             }
-        }
-    );
-    let _ = worker.join();
+        );
+    }
 }
