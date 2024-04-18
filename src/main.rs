@@ -36,7 +36,7 @@ fn main() {
                 };
 
                 let response = format!(
-                    "{}\r\nContent-Length: {}\r\n\r\n{}\r\n",
+                    "{}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}\r\n",
                     status_line,
                     content.len(),
                     content
