@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use std::{collections::HashMap, io::{BufRead, Read, Write}, net::TcpListener};
+use std::{collections::HashMap, io::{BufRead, Read, Write}, net::TcpListener, env, fs};
 use std::thread;
 
 fn main() {
@@ -31,6 +31,8 @@ fn main() {
                             let (header_name, header_value) = header.split(":").map(|s| s.trim()).take(2).collect_tuple().unwrap();
                             headers.entry(header_name).or_insert(header_value);
                         }
+
+                        let mut filename: &str = "";
         
                         let (status_line, content) = match path {
                             "/" => ("HTTP/1.1 200 OK", "OK"),
@@ -41,18 +43,35 @@ fn main() {
                                 } else if a.starts_with("/user-agent") {
                                     let user_agent = *headers.get("User-Agent").unwrap();
                                     ("HTTP/1.1 200 OK", user_agent)
+                                } else if a.starts_with("/files/") {
+                                    filename = a.trim_start_matches("/files/");
+                                    ("HTTP/1.1 200 OK", "")
                                 } else {
                                     ("HTTP/1.1 404 Not Found", "Not Found")
                                 }
                             },
                         };
-        
-                        let response = format!(
-                            "{}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}\r\n",
-                            status_line,
-                            content.len(),
-                            content
-                        );
+                        
+                        let response;
+                        if filename.len() > 0 {
+                            let args = env::args().collect_vec();
+                            let directory = args.get(2).unwrap().trim_end_matches("/");
+                            let filename = format!("{}/{}", directory, filename);
+                            let file_content = fs::read_to_string(format!("{}/{}", directory, filename)).unwrap_or("".to_string());
+                            response = format!(
+                                "{}\r\nContent-Type: application/octet-stream\r\nContent-Length: {}\r\n\r\n{}\r\n",
+                                status_line,
+                                file_content.len(),
+                                file_content
+                            );
+                        } else {
+                            response = format!(
+                                "{}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}\r\n",
+                                status_line,
+                                content.len(),
+                                content
+                            );
+                        }
                         if stream.write_all(response.as_bytes()).is_err() {
                             println!("Error writing to stream");
                         }
