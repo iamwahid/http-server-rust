@@ -69,7 +69,7 @@ fn main() {
                                 Err(_e) => {
                                     response = format!(
                                         "{}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}\r\n",
-                                        status_line,
+                                        "HTTP/1.1 404 Not Found",
                                         "".len(),
                                         ""
                                     );
