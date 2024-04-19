@@ -57,7 +57,7 @@ fn main() {
                             let args = env::args().collect_vec();
                             let directory = args.get(2).unwrap().trim_end_matches("/");
                             let filename = format!("{}/{}", directory, filename);
-                            let file_content = fs::read_to_string(format!("{}/{}", directory, filename)).unwrap_or("".to_string());
+                            let file_content = fs::read_to_string(filename).unwrap_or("".to_string());
                             response = format!(
                                 "{}\r\nContent-Type: application/octet-stream\r\nContent-Length: {}\r\n\r\n{}\r\n",
                                 status_line,
