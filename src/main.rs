@@ -91,7 +91,8 @@ fn main() {
                             let args = env::args().collect_vec();
                             let directory = args.get(2).unwrap().trim_end_matches("/");
                             let write_filename = format!("{}/{}", directory, write_filename);
-                            let content = http_request.last().unwrap().replace("\x00", "");
+                            let content = String::from_utf8(buffer.to_vec()).unwrap();
+                            let content = content.split("\r\n").last().unwrap().replace("\x00", "");
                             match fs::write(write_filename, content.clone()) {
                                 Ok(()) => {
                                     response = format!(
