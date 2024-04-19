@@ -57,13 +57,24 @@ fn main() {
                             let args = env::args().collect_vec();
                             let directory = args.get(2).unwrap().trim_end_matches("/");
                             let filename = format!("{}/{}", directory, filename);
-                            let file_content = fs::read_to_string(filename).unwrap_or("".to_string());
-                            response = format!(
-                                "{}\r\nContent-Type: application/octet-stream\r\nContent-Length: {}\r\n\r\n{}\r\n",
-                                status_line,
-                                file_content.len(),
-                                file_content
-                            );
+                            match fs::read_to_string(filename) {
+                                Ok(file_content) => {
+                                    response = format!(
+                                        "{}\r\nContent-Type: application/octet-stream\r\nContent-Length: {}\r\n\r\n{}\r\n",
+                                        status_line,
+                                        file_content.len(),
+                                        file_content
+                                    );
+                                },
+                                Err(_e) => {
+                                    response = format!(
+                                        "{}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}\r\n",
+                                        status_line,
+                                        "".len(),
+                                        ""
+                                    );
+                                }
+                            }
                         } else {
                             response = format!(
                                 "{}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}\r\n",
