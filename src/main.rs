@@ -18,7 +18,7 @@ fn main() {
                             .map(|r| r.unwrap())
                             .take_while(|line| !line.is_empty())
                             .collect();
-                        let (_method, path, _version) = http_request
+                        let (method, path, _version) = http_request
                             .first()
                             .unwrap()
                             .split(" ")
@@ -32,11 +32,12 @@ fn main() {
                             headers.entry(header_name).or_insert(header_value);
                         }
 
-                        let mut filename: &str = "";
+                        let mut read_filename: &str = "";
+                        let mut write_filename: &str = "";
         
-                        let (status_line, content) = match path {
-                            "/" => ("HTTP/1.1 200 OK", "OK"),
-                            a => {
+                        let (status_line, content) = match (method, path) {
+                            ("GET", "/") => ("HTTP/1.1 200 OK", "OK"),
+                            ("GET", a) => {
                                 if a.starts_with("/echo/") {
                                     let word = a.trim_start_matches("/echo/");
                                     ("HTTP/1.1 200 OK", word)
@@ -44,26 +45,60 @@ fn main() {
                                     let user_agent = *headers.get("User-Agent").unwrap();
                                     ("HTTP/1.1 200 OK", user_agent)
                                 } else if a.starts_with("/files/") {
-                                    filename = a.trim_start_matches("/files/");
+                                    read_filename = a.trim_start_matches("/files/");
                                     ("HTTP/1.1 200 OK", "")
                                 } else {
                                     ("HTTP/1.1 404 Not Found", "Not Found")
                                 }
                             },
+                            ("POST", a) => {
+                                if a.starts_with("/files/") {
+                                    write_filename = a.trim_start_matches("/files/");
+                                    ("HTTP/1.1 201 Created", "")
+                                } else {
+                                    ("HTTP/1.1 404 Not Found", "Not Found")
+                                }
+                            },
+                            _ => {
+                                ("HTTP/1.1 404 Not Found", "Not Found")
+                            }
                         };
                         
                         let response;
-                        if filename.len() > 0 {
+                        if read_filename.len() > 0 {
                             let args = env::args().collect_vec();
                             let directory = args.get(2).unwrap().trim_end_matches("/");
-                            let filename = format!("{}/{}", directory, filename);
-                            match fs::read_to_string(filename) {
+                            let read_filename = format!("{}/{}", directory, read_filename);
+                            match fs::read_to_string(read_filename) {
                                 Ok(file_content) => {
                                     response = format!(
                                         "{}\r\nContent-Type: application/octet-stream\r\nContent-Length: {}\r\n\r\n{}\r\n",
                                         status_line,
                                         file_content.len(),
                                         file_content
+                                    );
+                                },
+                                Err(_e) => {
+                                    response = format!(
+                                        "{}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}\r\n",
+                                        "HTTP/1.1 404 Not Found",
+                                        "".len(),
+                                        ""
+                                    );
+                                }
+                            }
+                        } else if write_filename.len() > 0 {
+                            let args = env::args().collect_vec();
+                            let directory = args.get(2).unwrap().trim_end_matches("/");
+                            let write_filename = format!("{}/{}", directory, write_filename);
+                            let content = http_request.last().unwrap().replace("\x00", "");
+                            match fs::write(write_filename, content.clone()) {
+                                Ok(()) => {
+                                    response = format!(
+                                        "{}\r\nContent-Type: application/octet-stream\r\nContent-Length: {}\r\n\r\n{}\r\n",
+                                        status_line,
+                                        content.len(),
+                                        content
                                     );
                                 },
                                 Err(_e) => {
