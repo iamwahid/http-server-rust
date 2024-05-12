@@ -34,13 +34,21 @@ fn main() {
 
                         let mut read_filename: &str = "";
                         let mut write_filename: &str = "";
+                        let mut encoding: Option<String> = None;
         
                         let (status_line, content) = match (method, path) {
                             ("GET", "/") => ("HTTP/1.1 200 OK", "OK"),
                             ("GET", a) => {
                                 if a.starts_with("/echo/") {
                                     let word = a.trim_start_matches("/echo/");
-                                    ("HTTP/1.1 200 OK", word)
+                                    match headers.get("Accept-Encoding") {
+                                        Some(enc) => {
+                                            encoding = Some(enc.to_string());
+                                            ("HTTP/1.1 200 OK", word)
+                                        },
+                                        None => ("HTTP/1.1 200 OK", word)
+                                    }
+                                    
                                 } else if a.starts_with("/user-agent") {
                                     let user_agent = *headers.get("User-Agent").unwrap();
                                     ("HTTP/1.1 200 OK", user_agent)
@@ -112,12 +120,33 @@ fn main() {
                                 }
                             }
                         } else {
-                            response = format!(
-                                "{}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}\r\n",
-                                status_line,
-                                content.len(),
-                                content
-                            );
+                            if let Some(enc) = encoding {
+                                match enc.as_str() {
+                                    "gzip" => {
+                                        response = format!(
+                                            "{}\r\nContent-Encoding: gzip\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}\r\n",
+                                            status_line,
+                                            content.len(),
+                                            content
+                                        );
+                                    },
+                                    _ => {
+                                        response = format!(
+                                            "{}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}\r\n",
+                                            status_line,
+                                            content.len(),
+                                            content
+                                        );
+                                    }
+                                }
+                            } else {
+                                response = format!(
+                                    "{}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}\r\n",
+                                    status_line,
+                                    content.len(),
+                                    content
+                                );
+                            }
                         }
                         if stream.write_all(response.as_bytes()).is_err() {
                             println!("Error writing to stream");
