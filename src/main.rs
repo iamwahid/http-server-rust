@@ -72,27 +72,26 @@ fn main() {
                             }
                         };
                         
-                        let response;
-                        if read_filename.len() > 0 {
+                        let response = if read_filename.len() > 0 {
                             let args = env::args().collect_vec();
                             let directory = args.get(2).unwrap().trim_end_matches("/");
                             let read_filename = format!("{}/{}", directory, read_filename);
                             match fs::read_to_string(read_filename) {
                                 Ok(file_content) => {
-                                    response = format!(
+                                    format!(
                                         "{}\r\nContent-Type: application/octet-stream\r\nContent-Length: {}\r\n\r\n{}\r\n",
                                         status_line,
                                         file_content.len(),
                                         file_content
-                                    );
+                                    )
                                 },
                                 Err(_e) => {
-                                    response = format!(
+                                    format!(
                                         "{}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}\r\n",
                                         "HTTP/1.1 404 Not Found",
                                         "".len(),
                                         ""
-                                    );
+                                    )
                                 }
                             }
                         } else if write_filename.len() > 0 {
@@ -103,51 +102,49 @@ fn main() {
                             let content = content.split("\r\n").last().unwrap().replace("\x00", "");
                             match fs::write(write_filename, content.clone()) {
                                 Ok(()) => {
-                                    response = format!(
+                                    format!(
                                         "{}\r\nContent-Type: application/octet-stream\r\nContent-Length: {}\r\n\r\n{}\r\n",
                                         status_line,
                                         content.len(),
                                         content
-                                    );
+                                    )
                                 },
                                 Err(_e) => {
-                                    response = format!(
+                                    format!(
                                         "{}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}\r\n",
                                         "HTTP/1.1 404 Not Found",
                                         "".len(),
                                         ""
-                                    );
+                                    )
                                 }
                             }
                         } else {
                             if let Some(enc) = encoding {
-                                match enc.as_str() {
-                                    "gzip" => {
-                                        response = format!(
-                                            "{}\r\nContent-Encoding: gzip\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}\r\n",
-                                            status_line,
-                                            content.len(),
-                                            content
-                                        );
-                                    },
-                                    _ => {
-                                        response = format!(
-                                            "{}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}\r\n",
-                                            status_line,
-                                            content.len(),
-                                            content
-                                        );
-                                    }
+                                if enc.contains("gzip") {
+                                    format!(
+                                        "{}\r\nContent-Encoding: gzip\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}\r\n",
+                                        status_line,
+                                        content.len(),
+                                        content
+                                    )
+                                } else {
+                                    format!(
+                                        "{}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}\r\n",
+                                        status_line,
+                                        content.len(),
+                                        content
+                                    )
                                 }
                             } else {
-                                response = format!(
+                                format!(
                                     "{}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}\r\n",
                                     status_line,
                                     content.len(),
                                     content
-                                );
+                                )
                             }
-                        }
+                        };
+
                         if stream.write_all(response.as_bytes()).is_err() {
                             println!("Error writing to stream");
                         }
